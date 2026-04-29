@@ -4,3 +4,4 @@ requests-toolbelt
 user-agent
 faker
 aiohttp
+aiofiles
