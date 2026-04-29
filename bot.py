@@ -8,7 +8,7 @@ from telethon.tl.types import DocumentAttributeFilename
 # ===================== CONFIG =====================
 API_ID = 21124241
 API_HASH = 'b7ddce3d3683f54be788fddae73fa468'
-BOT_TOKEN = 'YOUR_BOT_TOKEN'          # ⚠️ Replace with your bot token
+BOT_TOKEN = '8682073791:AAFHPWvDDFldHmSkrVRUYCMPzejMT9GQIa4'          # ⚠️ Replace with your bot token
 
 # Files
 PREMIUM_FILE = 'premium.txt'
