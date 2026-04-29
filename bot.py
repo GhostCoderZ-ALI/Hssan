@@ -15,8 +15,8 @@ except:
 faker = Faker()
 
 # ---------- ENVIRONMENT CONFIG ----------
-BOT_TOKEN = os.getenv("BOT_TOKEN", "YOUR_BOT_TOKEN_HERE")
-ADMIN_ID = int(os.getenv("ADMIN_ID", "123456789"))
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8682073791:AAFHPWvDDFldHmSkrVRUYCMPzejMT9GQIa4")
+ADMIN_ID = int(os.getenv("ADMIN_ID", "6699193683"))
 DB_PATH = os.getenv("DB_PATH", "Data/bot.db")
 PROXY_UPLOAD_PATH = "Data/proxy_upload.txt"
 
