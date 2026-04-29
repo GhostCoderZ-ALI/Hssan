@@ -5,3 +5,4 @@ user-agent
 faker
 aiohttp
 aiofiles
+bs4
