@@ -851,32 +851,33 @@ def _parse_confirm_result(
             result["response"] = charged_msg
             result["success_url"] = success_url
         elif st == "requires_action":
-            # Detect hCaptcha vs real 3DS
-            pi_or_si = conf.get("payment_intent") or conf.get("setup_intent") or {}
-            next_action = pi_or_si.get("next_action") or {}
-            action_type = next_action.get("type", "")
-            if action_type == "redirect_to_url":
-                redirect_url = next_action.get("redirect_to_url", {}).get("url", "")
-                if any(keyword in redirect_url.lower() for keyword in [
-                    "hcaptcha", "captcha", "turnstile", "challenge",
-                ]):
-                    result["status"] = "HCAPTCHA"
-                    result["response"] = "hCaptcha / Captcha"
-                else:
-                    result["status"] = "3DS"
-                    result["response"] = "3DS Required"
-            elif action_type == "use_stripe_sdk":
-                # Check for captcha subtype in SDK action
-                stripe_js = next_action.get("use_stripe_sdk", {})
-                if stripe_js.get("type") == "captcha":
-                    result["status"] = "HCAPTCHA"
-                    result["response"] = "hCaptcha (SDK)"
-                else:
-                    result["status"] = "3DS"
-                    result["response"] = "3DS Required (SDK)"
-            else:
-                result["status"] = "ACTION_REQUIRED"
-                result["response"] = "Action required"
+    pi_or_si = conf.get("payment_intent") or conf.get("setup_intent") or {}
+    next_action = pi_or_si.get("next_action") or {}
+    action_type = next_action.get("type", "")
+
+    # --- TEMPORARY: dump the full next_action into the response ---
+    raw_next = json.dumps(next_action, indent=2)
+    # -------------------------------------------------------------
+
+    if action_type == "redirect_to_url":
+        redirect_url = next_action.get("redirect_to_url", {}).get("url", "")
+        if any(k in redirect_url.lower() for k in ["hcaptcha","captcha","turnstile","challenge"]):
+            result["status"] = "HCAPTCHA"
+            result["response"] = "hCaptcha / Captcha"
+        else:
+            result["status"] = "3DS"
+            result["response"] = f"3DS Required\n<pre>{raw_next}</pre>"
+    elif action_type == "use_stripe_sdk":
+        stripe_js = next_action.get("use_stripe_sdk", {})
+        if stripe_js.get("type") == "captcha":
+            result["status"] = "HCAPTCHA"
+            result["response"] = "hCaptcha (SDK)"
+        else:
+            result["status"] = "3DS"
+            result["response"] = f"3DS Required (SDK)\n<pre>{raw_next}</pre>"
+    else:
+        result["status"] = "ACTION_REQUIRED"
+        result["response"] = f"Action required\n<pre>{raw_next}</pre>"
         elif st == "requires_payment_method":
             result["status"] = "DECLINED"
             result["response"] = "Card Declined"
