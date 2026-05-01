@@ -50,6 +50,8 @@ ALL_COMMANDS: list[tuple[str, str]] = [
     ("st2",      "Stripe Charged"),
     ("pf0.6",    "PayFast Charged"),
     ("b3-5",     "Braintree Charged"),
+    ("b3n",      "Braintree Auth"),
+    ("st15",     "Stripe $15 Charge"),
 ]
 
 KNOWN_COMMAND_NAMES: set[str] = {c.lower() for c, _ in ALL_COMMANDS}
