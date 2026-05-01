@@ -32,7 +32,7 @@ async def cmd_st2(message: types.Message):
         await message.answer(err_p)
         return
 
-    progress = await message.answer("⏳ Checking Stripe 1337decals...")
+    progress = await message.answer("⏳ Checking Stripe 2$ Gate")
     try:
         is_live, msg = await asyncio.to_thread(check_st2, cc, mm, yy, cvv, proxy)
     except Exception as e:
