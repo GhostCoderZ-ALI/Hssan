@@ -1,5 +1,6 @@
 import re
 import random
+import datetime
 
 CARD_PATTERN = re.compile(
     r'(\d{15,19})\s*[|:/\\\-]\s*(\d{1,2})\s*[|:/\\\-]\s*(\d{2,4})\s*[|:/\\\-]\s*(\d{3,4})'
@@ -100,6 +101,10 @@ def generate_cards(prefix: str, mm: str, yy: str, cvv_pattern: str, count: int =
     card_len = 15 if is_amex else 16
     cvv_len  = 4  if is_amex else 3
 
+    now = datetime.datetime.now()
+    current_year_2d = now.year % 100
+    current_month   = now.month
+
     generated: set = set()
     cards: list    = []
     attempts = 0
@@ -119,20 +124,30 @@ def generate_cards(prefix: str, mm: str, yy: str, cvv_pattern: str, count: int =
 
         # Month
         if _is_rand(mm):
-            card_mm = f"{random.randint(1, 12):02d}"
+            card_mm = random.randint(1, 12)
         elif mm.isdigit():
-            card_mm = mm.zfill(2)
+            card_mm = int(mm)
+            if card_mm < 1 or card_mm > 12:
+                continue
         else:
-            card_mm = f"{random.randint(1, 12):02d}"
+            card_mm = random.randint(1, 12)
 
-        # Year (stored as 2-digit)
+        # Year
         if _is_rand(yy):
-            card_yy = str(random.randint(25, 32))
+            card_yy = random.randint(current_year_2d, current_year_2d + 5)
         elif yy.isdigit():
-            y = yy[2:] if len(yy) == 4 else yy
-            card_yy = y if len(y) == 2 else str(random.randint(25, 32))
+            if len(yy) == 4:
+                card_yy = int(yy) % 100
+            else:
+                card_yy = int(yy)
         else:
-            card_yy = str(random.randint(25, 32))
+            card_yy = current_year_2d
+
+        # Validity: must not be expired
+        if card_yy < current_year_2d:
+            continue
+        if card_yy == current_year_2d and card_mm < current_month:
+            continue
 
         # CVV
         if _is_rand(cvv_pattern):
@@ -142,7 +157,7 @@ def generate_cards(prefix: str, mm: str, yy: str, cvv_pattern: str, count: int =
         else:
             card_cvv = "".join(str(random.randint(0, 9)) for _ in range(cvv_len))
 
-        entry = f"{card_num}|{card_mm}|{card_yy}|{card_cvv}"
+        entry = f"{card_num}|{card_mm:02d}|{card_yy:02d}|{card_cvv}"
         if entry not in generated:
             generated.add(entry)
             cards.append(entry)
