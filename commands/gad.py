@@ -13,6 +13,16 @@ from functions.emojis import EMOJI, EMOJI_PLAIN
 
 router = Router()
 
+# Cached Faker instances per locale
+_fakers = {}
+
+def _get_faker(locale: str) -> Faker:
+    if locale not in _fakers:
+        _fakers[locale] = Faker(locale)
+    return _fakers[locale]
+
+# Fallback locale if a field isn't available for the requested locale
+FALLBACK_LOCALE = "en_US"
 
 COUNTRIES = {
     "us":  ("en_US", "United States",  "US", "🇺🇸"),
@@ -136,19 +146,37 @@ def _safe(fn, default="─"):
 
 
 def _generate(locale: str) -> dict:
-    f = Faker(locale)
-    gender = random.choice(["Male", "Female"])
-    if gender == "Male":
-        name = _safe(f.name_male) if hasattr(f, "name_male") else _safe(f.name)
-    else:
-        name = _safe(f.name_female) if hasattr(f, "name_female") else _safe(f.name)
+    f = _get_faker(locale)
+    fb = _get_faker(FALLBACK_LOCALE) if locale != FALLBACK_LOCALE else None
 
-    street = _safe(f.street_address)
-    city   = _safe(f.city)
-    state  = _safe(f.state) if hasattr(f, "state") else (_safe(f.administrative_unit) if hasattr(f, "administrative_unit") else "─")
-    zipc   = _safe(f.postcode)
-    phone  = _safe(f.phone_number)
-    # Build clean email from name
+    # Name: use first_name + last_name for better results
+    first = _safe(f.first_name) or (fb and _safe(fb.first_name)) or "John"
+    last  = _safe(f.last_name) or (fb and _safe(fb.last_name)) or "Doe"
+    name  = f"{first} {last}"
+
+    # Street address
+    street = _safe(f.street_address) or (fb and _safe(fb.street_address)) or "123 Main St"
+
+    # City
+    city = _safe(f.city) or (fb and _safe(fb.city)) or "Unknown City"
+
+    # State / region
+    state = None
+    if hasattr(f, "state"):
+        state = _safe(f.state)
+    if not state and hasattr(f, "administrative_unit"):
+        state = _safe(f.administrative_unit)
+    if not state and fb:
+        state = _safe(fb.state) if hasattr(fb, "state") else "Unknown State"
+    state = state or "─"
+
+    # Postal code
+    zipc = _safe(f.postcode) or (fb and _safe(fb.postcode)) or "00000"
+
+    # Phone number
+    phone = _safe(f.phone_number) or (fb and _safe(fb.phone_number)) or "+1-555-0100"
+
+    # Email from name
     parts = "".join(c for c in name.lower() if c.isalpha() or c == " ").split()
     if len(parts) >= 2:
         local = f"{parts[0]}.{parts[-1]}{random.randint(10,9999)}"
@@ -157,13 +185,35 @@ def _generate(locale: str) -> dict:
     domain = random.choice(["gmail.com", "outlook.com", "yahoo.com", "hotmail.com", "proton.me"])
     email = f"{local}@{domain}"
 
-    ssn = _safe(f.ssn) if hasattr(f, "ssn") else "─"
-    job = _safe(f.job) if hasattr(f, "job") else "─"
-    dob = _safe(lambda: f.date_of_birth(minimum_age=21, maximum_age=65).strftime("%Y-%m-%d"))
+    # Date of birth
+    dob = "─"
+    try:
+        dob = _safe(lambda: f.date_of_birth(minimum_age=21, maximum_age=65).strftime("%Y-%m-%d"))
+    except Exception:
+        pass
+
+    # Job
+    job = "─"
+    try:
+        job = _safe(f.job)
+    except Exception:
+        try:
+            if fb:
+                job = _safe(fb.job)
+        except:
+            pass
+
+    # SSN / ID number (use ssn for US, may not exist for many locales)
+    ssn = "─"
+    if hasattr(f, "ssn"):
+        ssn = _safe(f.ssn)
+    elif fb and hasattr(fb, "ssn"):
+        ssn = _safe(fb.ssn)
 
     return {
-        "name": name, "gender": gender, "street": street, "city": city,
-        "state": state, "zip": zipc, "phone": phone, "email": email,
+        "name": name, "gender": random.choice(["Male", "Female"]),
+        "street": street, "city": city, "state": state,
+        "zip": zipc, "phone": phone, "email": email,
         "ssn": ssn, "job": job, "dob": dob,
     }
 
@@ -198,7 +248,6 @@ def _regen_kb(country_key: str, uid: int) -> InlineKeyboardMarkup:
             callback_data=f"gad:{country_key}:{uid}",
         )
     ]])
-
 
 @router.message(Command("gad", "fake", "addr", prefix="/."))
 async def cmd_gad(msg: Message, command: CommandObject, bot: Bot):
