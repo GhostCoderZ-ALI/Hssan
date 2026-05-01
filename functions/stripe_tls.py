@@ -802,27 +802,26 @@ def _parse_confirm_result(
     start: float
 ) -> Dict[str, Any]:
     """Parse Stripe confirm response"""
-    
+
     if "error" in conf:
         err = conf["error"]
         dc = err.get("decline_code", "")
         raw = err.get("message", "Declined")
         err_code = err.get("code", "")
-        
+
         # Stripe returns CVC errors in 'code' field, not 'decline_code'
         if not dc and (err_code == "incorrect_cvc" or "security code" in raw.lower()):
             dc = "incorrect_cvc"
-        
+
         if "expired" in raw.lower() or "expired" in err_code.lower():
             result["status"] = "EXPIRED"
             result["response"] = "Session expired"
-        elif ("integration surface" in raw.lower() 
+        elif ("integration surface" in raw.lower()
               or "tokenization" in raw.lower()
               or "unsupported" in raw.lower()):
             result["status"] = "NOT SUPPORTED"
             result["response"] = "Checkout not supported"
         else:
-            # Format: [decline_code] [message] for detailed response
             if dc:
                 resp = f"[{dc}] [{raw}]"
             else:
@@ -835,14 +834,13 @@ def _parse_confirm_result(
         pi = conf.get("payment_intent") or {}
         si = conf.get("setup_intent") or {}
         st = pi.get("status", "") or si.get("status", "") or conf.get("status", "")
-        
+
         if st == "succeeded":
             success_url = (
                 conf.get("success_url")
                 or pi.get("success_url")
                 or checkout_data.get("success_url")
             )
-            # Include amount in response like "Charged USD 20.0"
             price = checkout_data.get("price")
             currency = (checkout_data.get("currency") or "").upper()
             if price is not None:
@@ -853,15 +851,31 @@ def _parse_confirm_result(
             result["response"] = charged_msg
             result["success_url"] = success_url
         elif st == "requires_action":
-            result["status"] = "3DS"
-            result["response"] = "3DS Required"
+            # Detect hCaptcha vs real 3DS
+            pi_or_si = conf.get("payment_intent") or conf.get("setup_intent") or {}
+            next_action = pi_or_si.get("next_action") or {}
+            action_type = next_action.get("type", "")
+            if action_type == "redirect_to_url":
+                redirect_url = next_action.get("redirect_to_url", {}).get("url", "")
+                if "hcaptcha" in redirect_url.lower() or "captcha" in redirect_url.lower():
+                    result["status"] = "HCAPTCHA"
+                    result["response"] = "hCaptcha – card not usable"
+                else:
+                    result["status"] = "3DS"
+                    result["response"] = "3DS Required"
+            elif action_type == "use_stripe_sdk":
+                result["status"] = "3DS"
+                result["response"] = "3DS Required (SDK)"
+            else:
+                result["status"] = "ACTION_REQUIRED"
+                result["response"] = "Action required"
         elif st == "requires_payment_method":
             result["status"] = "DECLINED"
             result["response"] = "Card Declined"
         else:
             result["status"] = "UNKNOWN"
             result["response"] = st or "Unknown"
-    
+
     result["time"] = round(time.perf_counter() - start, 2)
     return result
 
