@@ -308,7 +308,6 @@ _FULL_HELP = (
     f"│  <code>/delbin &lt;name&gt;</code>         Delete BIN\n"
     f"│  <code>/proxy add/test/del</code>    Proxy mgmt\n"
     f"│  <code>/temp1 /temp2 /temp3</code>   Temp email\n"
-    f"│  <code>/adb &lt;country&gt;</code>         Address DB\n"
     f"│\n"
     f"│  <b>★ Account</b>\n"
     f"│  <code>/start</code>    home screen\n"
