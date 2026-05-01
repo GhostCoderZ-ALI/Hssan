@@ -27,9 +27,7 @@ ALL_COMMANDS: list[tuple[str, str]] = [
     ("b3",       "Braintree 3D"),
     ("pp",       "PayPal $1"),
     ("mpp",      "Mass PayPal"),
-    ("sh",       "Shopify"),
-    ("msh",      "Mass Shopify"),
-    ("mchk",     "Mass Shopify direct"),
+    # removed: /sh /msh /mchk /adb
     ("gen",      "Card generator"),
     ("gad",      "Fake address (per country)"),
     ("bin",      "BIN lookup"),
@@ -40,7 +38,6 @@ ALL_COMMANDS: list[tuple[str, str]] = [
     ("temp1",    "Temp email 1"),
     ("temp2",    "Temp email 2"),
     ("temp3",    "Temp email 3"),
-    ("adb",      "Address DB"),
     ("credits",  "Plan info"),
     ("myhits",   "Hit history"),
     ("redeem",   "Claim plan"),
@@ -49,6 +46,10 @@ ALL_COMMANDS: list[tuple[str, str]] = [
     ("ping",     "Latency"),
     ("admin",    "Admin panel"),
     ("whoami",   "Role check"),
+    # NEW GATES
+    ("st2",      "Stripe 1337decals"),
+    ("pf0.6",    "PayFast $0.6"),
+    ("b3-5",     "Braintree $5 Charged"),
 ]
 
 KNOWN_COMMAND_NAMES: set[str] = {c.lower() for c, _ in ALL_COMMANDS}
