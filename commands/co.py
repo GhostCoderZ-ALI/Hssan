@@ -112,6 +112,8 @@ def _status_line(result: dict) -> str:
         return f"{EMOJI['live']} LIVE"
     if st == "DECLINED":
         return f"{EMOJI['declined']} DECLINED"
+    if st == "HCAPTCHA":                         # ← new line
+        return f"{EMOJI['error']} HCAPTCHA"
     if st == "3DS":
         return f"{EMOJI['3ds']} 3DS"
     if st in ("EXPIRED", "SESSION_EXPIRED"):
