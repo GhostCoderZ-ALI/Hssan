@@ -4,7 +4,7 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # ─── PERMANENT OWNER / BOT (set via env) ──────────────────────────────
-BOT_TOKEN = os.getenv("BOT_TOKEN", "")
+BOT_TOKEN = os.getenv("BOT_TOKEN", "8614292009:AAE1VZ9M1IQDr0gKbzs7aTZRcjEGBjTdEaU")
 OWNER_IDS = [
     int(x.strip())
     for x in os.getenv("OWNER_IDS", "6699193683").split(",")
