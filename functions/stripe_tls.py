@@ -857,15 +857,23 @@ def _parse_confirm_result(
             action_type = next_action.get("type", "")
             if action_type == "redirect_to_url":
                 redirect_url = next_action.get("redirect_to_url", {}).get("url", "")
-                if "hcaptcha" in redirect_url.lower() or "captcha" in redirect_url.lower():
+                if any(keyword in redirect_url.lower() for keyword in [
+                    "hcaptcha", "captcha", "turnstile", "challenge",
+                ]):
                     result["status"] = "HCAPTCHA"
-                    result["response"] = "hCaptcha – card not usable"
+                    result["response"] = "hCaptcha / Captcha"
                 else:
                     result["status"] = "3DS"
                     result["response"] = "3DS Required"
             elif action_type == "use_stripe_sdk":
-                result["status"] = "3DS"
-                result["response"] = "3DS Required (SDK)"
+                # Check for captcha subtype in SDK action
+                stripe_js = next_action.get("use_stripe_sdk", {})
+                if stripe_js.get("type") == "captcha":
+                    result["status"] = "HCAPTCHA"
+                    result["response"] = "hCaptcha (SDK)"
+                else:
+                    result["status"] = "3DS"
+                    result["response"] = "3DS Required (SDK)"
             else:
                 result["status"] = "ACTION_REQUIRED"
                 result["response"] = "Action required"
