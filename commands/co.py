@@ -405,7 +405,6 @@ async def cmd_hit(msg: Message, bot: Bot):
 
 
 # ─── Core hit loop ────────────────────────────────────────────────────────────
-
 async def _run_hit(msg, bot, uid, cards, checkout, url, proxy, status_msg, amount_display, merchant):
     total = len(cards)
     is_priv = await _is_priv(uid)
@@ -459,12 +458,15 @@ async def _run_hit(msg, bot, uid, cards, checkout, url, proxy, status_msg, amoun
 
         is_charged = (st == "CHARGED")
         is_live = (st == "DECLINED" and dc == "incorrect_cvc")
+        is_hcaptcha = (st == "HCAPTCHA")
 
         # Tally counters
         if is_charged:
             charged += 1
         elif is_live:
             live += 1
+        elif is_hcaptcha:
+            errors += 1            # treat as an error, not a live card
         elif st in ("DECLINED", "NOT SUPPORTED"):
             declined += 1
         else:
