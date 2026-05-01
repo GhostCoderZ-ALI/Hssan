@@ -76,3 +76,5 @@ telethon
 tls_client>=1.0.0
 user-agent
 aiogram
+capsolver
+capsolver-python
