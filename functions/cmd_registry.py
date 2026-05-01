@@ -47,9 +47,9 @@ ALL_COMMANDS: list[tuple[str, str]] = [
     ("admin",    "Admin panel"),
     ("whoami",   "Role check"),
     # NEW GATES
-    ("st2",      "Stripe 1337decals"),
-    ("pf0.6",    "PayFast $0.6"),
-    ("b3-5",     "Braintree $5 Charged"),
+    ("st2",      "Stripe Charged"),
+    ("pf0.6",    "PayFast Charged"),
+    ("b3-5",     "Braintree Charged"),
 ]
 
 KNOWN_COMMAND_NAMES: set[str] = {c.lower() for c, _ in ALL_COMMANDS}
