@@ -1,1 +1,9 @@
-_FULL_HELP = "Commands:\n\n- /start: Start the bot\n- /help: Show help message\n- /info: Get information about the bot\n- /settings: Configure your preferences\n- /status: Check your current status\n- /st2: Charge payment\n- /b3-5: Charge payment\n- /pf0.6: Charge payment\n- /other_command1: Description of other_command1\n- /other_command2: Description of other_command2\n...\n"
+# Commands
+
+# Payment Gateways
+_GATES_TEXT = "Commands: /st2, /b3-5, /pf0.6\n...other commands..."
+
+# Full Help
+_FULL_HELP = "Available commands: /st2, /b3-5, /pf0.6\n...other details..."
+
+# Other parts of the code remain unchanged...
