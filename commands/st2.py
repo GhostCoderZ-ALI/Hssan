@@ -52,5 +52,5 @@ async def cmd_st2(message: types.Message):
         f"{icon} <b>{status}</b>\n"
         f"💳 <code>{raw}</code>\n"
         f"📝 <i>{msg[:300]}</i>\n"
-        f"🏪 Gate: Stripe 1337decals"
+        f"🏪 Gate: Stripe"
     )
