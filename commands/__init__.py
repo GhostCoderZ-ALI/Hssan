@@ -19,6 +19,11 @@ from commands.mst import router as mst_router            # /st /mst
 from commands.chk import router as chk_router            # /mchk
 from commands.gad import router as gad_router            # /gad
 
+# ── NEW GATES ──
+from commands.pf06 import router as pf06_router          # /pf0.6
+from commands.st2 import router as st2_router            # /st2
+from commands.b3_5 import router as b35_router           # /b3-5
+
 router = Router()
 
 router.include_router(start_router)
@@ -39,3 +44,8 @@ router.include_router(pp_router)
 router.include_router(mst_router)
 router.include_router(chk_router)
 router.include_router(gad_router)
+
+# ── New gates registration ──
+router.include_router(pf06_router)
+router.include_router(st2_router)
+router.include_router(b35_router)
