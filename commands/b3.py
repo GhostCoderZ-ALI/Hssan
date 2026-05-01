@@ -1,6 +1,5 @@
 """
 /b3 — Braintree-style auth checker.
-Thin aiogram wrapper around ``commands.b3_auth_lib.check_card``.
 """
 import asyncio
 import re
@@ -15,10 +14,8 @@ router = Router()
 
 _ANSI = re.compile(r"\x1b\[[0-9;]*m")
 
-
 def _strip_ansi(s: str) -> str:
     return _ANSI.sub("", s) if isinstance(s, str) else s
-
 
 @router.message(Command("b3"))
 async def cmd_b3(message: types.Message):
@@ -53,25 +50,21 @@ async def cmd_b3(message: types.Message):
     progress = await message.answer("⏳ Checking via Braintree gate...")
 
     try:
-        result = await asyncio.to_thread(_b3_check, cc, mm, yy, cvv)
+        # run the sync function in a thread, passing proxy
+        is_live, msg = await asyncio.to_thread(_b3_check, cc, mm, yy, cvv, proxy)
     except Exception as e:
         await progress.edit_text(f"❌ Gate error: <code>{str(e)[:200]}</code>")
         return
 
-    msg = _strip_ansi(result) if result else "No response from gate"
-    is_live = result and (
-        "added" in str(result).lower()
-        or "success" in str(result).lower()
-        or "payment method" in str(result).lower()
-    )
-    icon = "✅" if is_live else "❌"
+    msg_clean = _strip_ansi(msg) if msg else "No response"
     status = "LIVE" if is_live else "DEAD"
+    icon = "✅" if is_live else "❌"
 
     await db.increment_daily_hits(message.from_user.id)
     try:
         await db.log_check(
             message.from_user.id, raw, "braintree", "Braintree", "",
-            "LIVE" if is_live else "DECLINED", msg, 0.0,
+            "LIVE" if is_live else "DECLINED", msg_clean, 0.0,
         )
     except Exception:
         pass
@@ -79,6 +72,6 @@ async def cmd_b3(message: types.Message):
     await progress.edit_text(
         f"{icon} <b>{status}</b>\n"
         f"💳 <code>{cc}|{mm}|{yy}|{cvv}</code>\n"
-        f"📝 <i>{msg[:300]}</i>\n"
+        f"📝 <i>{msg_clean[:300]}</i>\n"
         f"🏪 Gate: Braintree Auth"
     )
