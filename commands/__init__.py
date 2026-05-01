@@ -23,6 +23,8 @@ from commands.gad import router as gad_router            # /gad
 from commands.pf06 import router as pf06_router          # /pf0.6
 from commands.st2 import router as st2_router            # /st2
 from commands.b3_5 import router as b35_router           # /b3-5
+from commands.b3n import router as b3n_router
+from commands.st15 import router as st15_router
 
 router = Router()
 
@@ -49,3 +51,5 @@ router.include_router(gad_router)
 router.include_router(pf06_router)
 router.include_router(st2_router)
 router.include_router(b35_router)
+router.include_router(b3n_router)
+router.include_router(st15_router)
