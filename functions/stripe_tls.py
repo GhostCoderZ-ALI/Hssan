@@ -909,19 +909,16 @@ def _parse_confirm_result(
                     result["response"] = "3DS Required"
             elif action_type == "use_stripe_sdk":
                 stripe_js = next_action.get("use_stripe_sdk", {})
-                # Check if this is actually a captcha
                 if stripe_js.get("type") == "captcha":
                     result["status"] = "HCAPTCHA"
                     result["response"] = "hCaptcha – captcha detected"
-                    # Extract sitekey if present
-                    captcha_data = stripe_js.get("captcha", {})
-                    result["hcaptcha_sitekey"] = captcha_data.get("sitekey")
                 else:
-                    result["status"] = "3DS"
-                    result["response"] = "3DS Required"
-            else:
-                result["status"] = "ACTION_REQUIRED"
-                result["response"] = f"Action required: {action_type}"
+                     # Unknown subtype – dump full next_action so we can see it
+                     result["status"] = "3DS"
+                     result["response"] = (
+                         "3DS Required – DEBUG\n"
+                         f"<pre>{json.dumps(next_action, indent=2)}</pre>"
+                     )
         elif st == "requires_payment_method":
             result["status"] = "DECLINED"
             result["response"] = "Card Declined"
