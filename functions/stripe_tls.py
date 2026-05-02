@@ -913,12 +913,15 @@ def _parse_confirm_result(
                     result["status"] = "HCAPTCHA"
                     result["response"] = "hCaptcha – captcha detected"
                 else:
-                     # Unknown subtype – dump full next_action so we can see it
-                     result["status"] = "3DS"
-                     result["response"] = (
-                         "3DS Required – DEBUG\n"
-                         f"<pre>{json.dumps(next_action, indent=2)}</pre>"
-                     )
+                    # Unknown subtype – dump full next_action so we can see it
+                    result["status"] = "3DS"
+                    result["response"] = (
+                        "3DS Required – DEBUG\n"
+                        f"<pre>{json.dumps(next_action, indent=2)}</pre>"
+                    )
+            else:
+                result["status"] = "ACTION_REQUIRED"
+                result["response"] = f"Action required: {action_type}"
         elif st == "requires_payment_method":
             result["status"] = "DECLINED"
             result["response"] = "Card Declined"
