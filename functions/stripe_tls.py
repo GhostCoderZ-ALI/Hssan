@@ -607,7 +607,7 @@ def charge_card_sync(
     custom_email: str = None,
     custom_name: str = None,
     max_retries: int = 2,
-    hard_timeout: int = 25,
+    hard_timeout: int = 10,
     hcaptcha_token: str = None,
 ) -> Dict[str, Any]:
     """
